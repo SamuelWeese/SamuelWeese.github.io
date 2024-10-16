@@ -183,8 +183,10 @@ footer {
 }
 
 .footer-center {
-    text-align: center;
-    flex-basis: 50%;
+    display: flex;
+    justify-content: center; /* Centers the content horizontally */
+    align-items: center; /* Centers the content vertically */
+    height: 100px; /* Adjust the height as needed */
 }
 
 footer p {
