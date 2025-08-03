@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sam Weese</title>
+  <style id="dynamic-style">
+    :root {
+      --primary-color: #39439e;
+      --secondary-color: #7f8c8d;
+      --page-bg-color: #ffffff;
+      --container-bg-color: #ffffff;
+      --text-color: #333333;
+      --hover-color: #ecf0f1;
+      --input-bg: #f5f5f5;
+      --input-border: #ddd;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--page-bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: var(--container-bg-color);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      max-width: 500px;
+      width: 90%;
+      margin-top: 5vh;
+    }
+    .controls {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    .seed-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 300px;
+      margin: 0 auto;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background-color: var(--input-bg);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .seed-wrapper:focus-within {
+      border-color: var(--primary-color);
+    }
+    #seed-input {
+      flex: 1;
+      padding: 0.75rem 0.5rem 0.75rem 1rem;
+      font-size: 0.875rem;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      outline: none;
+    }
+    #seed-input::placeholder {
+      color: rgba(128, 128, 128, 0.7);
+    }
+    .button-group {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding-right: 0.25rem;
+    }
+    #random-seed {
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+      min-width: 2rem;
+      height: 2rem;
+    }
+    #random-seed:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+    #apply-seed {
+      border: none;
+      background: var(--primary-color);
+      color: #fff;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      transition: background-color 0.3s;
+      white-space: nowrap;
+    }
+    #apply-seed:hover {
+      background-color: var(--hover-color);
+      color: var(--text-color);
+    }
+    .name {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--primary-color);
+    }
+    .tagline {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: var(--secondary-color);
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    li { margin: 0; }
+    a {
+      text-decoration: none;
+      color: var(--primary-color);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      transition: background-color 0.3s, color 0.3s;
+      display: inline-block;
+    }
+    a:hover {
+      background-color: var(--hover-color);
+      color: var(--text-color);
+    }
+    .bio-wrapper {
+      background-color: #f0f0f0;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      width: 90%;
+      max-width: 600px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+  </style>
+  <script>
+    const hashSeed = seed => {
+      let h = 0;
+      for (let i = 0; i < seed.length; i++) {
+        h = seed.charCodeAt(i) + ((h << 5) - h);
+      }
+      return Math.abs(h);
+    };
+    const hslToHex = (h, s, l) => {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `#${[f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+    };
+    const luminance = c => {
+      const rgb = parseInt(c.slice(1),16);
+      const r = (rgb>>16)&255, g=(rgb>>8)&255, b=rgb&255;
+      return 0.299*r + 0.587*g + 0.114*b;
+    };
+    const contrast = (c1,c2) => Math.abs(luminance(c1)-luminance(c2));
+
+    function generatePalette(seed) {
+      const base = hashSeed(seed) % 360;
+      const h1 = base;
+      const h2a = (base + 30) % 360;
+      const h2b = (base + 120) % 360;
+      const primary = hslToHex(h1, 30, 40);
+      const secA = hslToHex(h2a, 20, 50);
+      const secB = hslToHex(h2b, 20, 50);
+      const secondary = contrast(primary, secA) > contrast(primary, secB) ? secA : secB;
+
+      const oppHue = (base + 180) % 360;
+      let pageBg = hslToHex(oppHue, 10, 96);
+      let containerBg = hslToHex(oppHue, 10, 92);
+      if (contrast(pageBg, containerBg) < 10) containerBg = hslToHex(oppHue, 10, 86);
+      if (contrast(containerBg, primary) < 40) containerBg = hslToHex(oppHue, 10, 80);
+
+      const hover = hslToHex(h1, 30, 80);
+      return { primary, secondary, pageBg, containerBg, hover };
+    }
+
+    function applySeed(seed) {
+      const seedValue = seed || crypto.randomUUID();
+      location.hash = seedValue;
+      document.querySelector('#seed-input').value = seedValue;
+      const { primary, secondary, pageBg, containerBg, hover } = generatePalette(seedValue);
+      const root = document.documentElement.style;
+      root.setProperty('--primary-color', primary);
+      root.setProperty('--secondary-color', secondary);
+      root.setProperty('--page-bg-color', pageBg);
+      root.setProperty('--container-bg-color', containerBg);
+      root.setProperty('--hover-color', hover);
+      root.setProperty('--text-color', luminance(pageBg) > 180 ? '#222222' : '#f9f9f9');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const initial = location.hash.slice(1) || crypto.randomUUID();
+      if (!location.hash) location.hash = initial;
+      applySeed(initial);
+      const seedInput = document.querySelector('#seed-input');
+
+      let debounceTimer;
+      seedInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const value = seedInput.value.trim();
+          if (value) {
+            applySeed(value);
+          }
+        }, 15);
+      });
+
+      document.querySelector('#random-seed').addEventListener('click', () => {
+        applySeed(crypto.randomUUID());
+      });
+      
+      window.addEventListener('hashchange', () => {
+        const newSeed = location.hash.slice(1);
+        if (newSeed && newSeed !== seedInput.value) {
+          applySeed(newSeed);
+        }
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <div class="seed-wrapper">
+        <input type="text" id="seed-input" placeholder="Enter seed..." />
+        <div class="button-group">
+          <button id="random-seed">🎲</button>
+        </div>
+      </div>
+    </div>
+    <div class="name">Sam Weese</div>
+    <div class="tagline">Software Guy | ICPC@UC | PhD Wrangler</div>
+    <ul>
+      <li><a href="#">Email</a></li>
+      <li><a href="#">GitHub</a></li>
+      <li><a href="#">Competitive Programming at UC</a></li>
+      <li><a href="#">Publications</a></li>
+
+    </ul>
+  </div>
+  <div class="bio-wrapper">
+    <p>He has told you, O man, what is good;
+      and what does the Lord require of you
+      but to do justice, and to love kindness,
+      and to walk humbly with your God?</p>
+  </div>
+</body>
+</html>
