@@ -195,6 +195,9 @@
     }
 
     function applySeed(seed) {
+      if (seed=="christmas"){
+        window.location.replace("https://example.com");
+        return;}
       const seedValue = seed || crypto.randomUUID();
       location.hash = seedValue;
       document.querySelector('#seed-input').value = seedValue;
