@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campaign Atlas</title>
+  <style id="dynamic-style">
+    :root {
+      --primary-color: #39439e;
+      --secondary-color: #7f8c8d;
+      --page-bg-color: #ffffff;
+      --container-bg-color: #ffffff;
+      --text-color: #333333;
+      --hover-color: #ecf0f1;
+      --input-bg: #f5f5f5;
+      --input-border: #ddd;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--page-bg-color);
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    /* --- seed picker (shared chrome) --- */
+    .controls {
+      margin: 2rem 0 1rem;
+      text-align: left;
+      width: 90%;
+      max-width: 900px;
+      display: flex;
+      justify-content: center;
+    }
+    .seed-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 300px;
+      border: 1px solid var(--input-border);
+      border-radius: 8px;
+      background-color: var(--input-bg);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+      transition: border-color 0.3s;
+    }
+    .seed-wrapper:focus-within {
+      border-color: var(--primary-color);
+    }
+    #seed-input {
+      flex: 1;
+      padding: 0.75rem 0.5rem 0.75rem 1rem;
+      font-size: 0.875rem;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      outline: none;
+    }
+    #seed-input::placeholder {
+      color: rgba(128, 128, 128, 0.7);
+    }
+    .button-group {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding-right: 0.25rem;
+    }
+    #random-seed {
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      padding: 0.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s;
+      min-width: 2rem;
+      height: 2rem;
+    }
+    #random-seed:hover {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* --- main shell --- */
+    .app-container {
+      background-color: var(--container-bg-color);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+      max-width: 900px;
+      width: 90%;
+      margin-bottom: 5vh;
+      transition: background-color 0.3s;
+    }
+    .title {
+      font-size: 2.2rem;
+      margin-bottom: 0.35rem;
+      font-weight: 600;
+      color: var(--primary-color);
+      text-align: center;
+    }
+    .tagline {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      color: var(--secondary-color);
+      text-align: center;
+    }
+
+    /* --- tabs --- */
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--input-border);
+      margin-bottom: 1.5rem;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      padding: 0.6rem 1.15rem;
+      font-size: 0.9rem;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--secondary-color);
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      position: relative;
+      top: 1px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .tab-btn:hover {
+      background-color: var(--hover-color);
+      color: var(--text-color);
+    }
+    .tab-btn.active {
+      color: var(--primary-color);
+      border-bottom: 2px solid var(--primary-color);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* --- map tab --- */
+    .map-area {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .canvas-wrap {
+      flex: 1;
+      min-width: 0;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      padding: 0.5rem;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.08);
+    }
+    #map-canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      cursor: default;
+    }
+    .map-hint {
+      margin: 0.6rem 0 0;
+      font-size: 0.8rem;
+      color: var(--secondary-color);
+      text-align: center;
+    }
+    .side-panel {
+      width: 0;
+      opacity: 0;
+      overflow: hidden;
+      flex-shrink: 0;
+      background-color: var(--container-bg-color);
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      padding: 0;
+      position: relative;
+      transition: width 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    }
+    .side-panel.open {
+      width: 230px;
+      opacity: 1;
+      padding: 1.25rem 1rem 1rem;
+    }
+    .panel-close {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      border: none;
+      background: transparent;
+      color: var(--secondary-color);
+      font-size: 1.1rem;
+      line-height: 1;
+      cursor: pointer;
+      padding: 0.25rem 0.4rem;
+      border-radius: 4px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    .panel-close:hover {
+      background-color: var(--hover-color);
+      color: var(--text-color);
+    }
+    #panel-title {
+      margin: 0 1.5rem 0.5rem 0;
+      font-size: 1.05rem;
+      color: var(--primary-color);
+      white-space: normal;
+    }
+    #panel-desc {
+      margin: 0;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: var(--text-color);
+    }
+
+    @media (max-width: 640px) {
+      .map-area { flex-direction: column; }
+      .side-panel.open { width: 100%; }
+    }
+
+    /* --- characters tab --- */
+    .character-list {
+      max-height: 520px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      padding-right: 0.4rem;
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary-color) var(--input-bg);
+    }
+    .character-list::-webkit-scrollbar { width: 8px; }
+    .character-list::-webkit-scrollbar-track {
+      background: var(--input-bg);
+      border-radius: 8px;
+    }
+    .character-list::-webkit-scrollbar-thumb {
+      background-color: var(--primary-color);
+      border-radius: 8px;
+    }
+    .character-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      text-align: left;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      border-radius: 10px;
+      padding: 0.75rem;
+      transition: background-color 0.3s;
+    }
+    .character-card:hover {
+      background-color: var(--hover-color);
+    }
+    .char-image {
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      border-radius: 8px;
+      border: 1px dashed var(--input-border);
+      background-color: rgba(128, 128, 128, 0.12);
+      color: var(--secondary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.62rem;
+      line-height: 1.1;
+      padding: 0.2rem;
+    }
+    .char-info { min-width: 0; }
+    .char-name {
+      font-weight: 600;
+      color: var(--primary-color);
+      margin-bottom: 0.2rem;
+    }
+    .char-desc {
+      font-size: 0.85rem;
+      color: var(--text-color);
+      opacity: 0.85;
+    }
+  </style>
+  <script>
+    const hashSeed = seed => {
+      let h = 0;
+      for (let i = 0; i < seed.length; i++) {
+        h = seed.charCodeAt(i) + ((h << 5) - h);
+      }
+      return Math.abs(h);
+    };
+    const hslToHex = (h, s, l) => {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return `#${[f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('')}`;
+    };
+    const luminance = c => {
+      const rgb = parseInt(c.slice(1),16);
+      const r = (rgb>>16)&255, g=(rgb>>8)&255, b=rgb&255;
+      return 0.299*r + 0.587*g + 0.114*b;
+    };
+    const contrast = (c1,c2) => Math.abs(luminance(c1)-luminance(c2));
+
+    function generatePalette(seed) {
+      const base = hashSeed(seed) % 360;
+      const h1 = base;
+      const h2a = (base + 30) % 360;
+      const h2b = (base + 120) % 360;
+      const primary = hslToHex(h1, 30, 40);
+      const secA = hslToHex(h2a, 20, 50);
+      const secB = hslToHex(h2b, 20, 50);
+      const secondary = contrast(primary, secA) > contrast(primary, secB) ? secA : secB;
+
+      const oppHue = (base + 180) % 360;
+      let pageBg = hslToHex(oppHue, 10, 96);
+      let containerBg = hslToHex(oppHue, 10, 92);
+      if (contrast(pageBg, containerBg) < 10) containerBg = hslToHex(oppHue, 10, 86);
+      if (contrast(containerBg, primary) < 40) containerBg = hslToHex(oppHue, 10, 80);
+
+      const hover = hslToHex(h1, 30, 80);
+      return { primary, secondary, pageBg, containerBg, hover };
+    }
+
+    function applySeed(seed) {
+      const seedValue = seed || crypto.randomUUID();
+      location.hash = seedValue;
+      document.querySelector('#seed-input').value = seedValue;
+      const { primary, secondary, pageBg, containerBg, hover } = generatePalette(seedValue);
+      const root = document.documentElement.style;
+      root.setProperty('--primary-color', primary);
+      root.setProperty('--secondary-color', secondary);
+      root.setProperty('--page-bg-color', pageBg);
+      root.setProperty('--container-bg-color', containerBg);
+      root.setProperty('--hover-color', hover);
+      root.setProperty('--text-color', luminance(pageBg) > 180 ? '#222222' : '#f9f9f9');
+      if (document.getElementById('map-canvas')) drawMap();
+    }
+
+    /* ---------------- map data ---------------- */
+    // LOCATIONS
+    // - Hey, if you're a player you shouldn't be here
+    // but thats ok, because I thought ahead @KJ @GALLAGER (I mean Jacob, Molly isn't out to annoy me... yet)
+    // So we have
+    // ISLANDS
+    //
+    // # Main
+    // - Shep and Sandra's house (unvisited)
+    // - The Hollyfrost Inn (visited!)
+    // - Balinglass Cove Harbor Dock (visited!)
+    // - Pete's Place (unvisited)
+    // - Mal's General Store (visited!)
+    // - Joanna's Fabrics (visited!)
+    // - Blinko's place (unvisited, unknown about)
+    // - Da Hills (unvisited)
+    // - Last Sight Peak (unvisited, name unknown)
+    // - Last Sight Abandoned Mine (unknown, unvisited)
+    // - The Deep Woods (unvisited, walked upper edge)
+    // - Martin's Hill Smithy (unknown)
+    // - Northern Bay Pirate Landing (unvisited)
+    // - The Shorn Stones (unknown)
+    // - 
+    // - 
+    // - 
+    // - 
+    //
+    // # Frogman
+    // - Frogman's Tower
+    const locations = [
+      { name: 'Emberreach', x: 340, y: 100, desc: 'A blackened stretch of volcanic badlands where fire elementals are said to roam the cooling lava flows.' },
+      { name: 'Silverlake', x: 305, y: 320, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' }
+    ];
+    // Hard coded characters
+    // - Je
+    const characters = [
+      { name: 'Martin', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Fred', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Fycus', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Anais', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Blinko', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Brin', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'George (Cliff)', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Holly', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Jeth', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Joanna', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Mal', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Pat', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Sandra', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Shep', met: false, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+      { name: 'Terrence', met: true, desc: 'A tranquil lake town built on stilts, famous for its silver-scaled fish and a floating market at dawn.' },
+    ];
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function drawLake(ctx, cx, cy) {
+      ctx.fillStyle = '#8fc3d6';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 55, 30, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#6fa3b8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawRiver(ctx) {
+      ctx.strokeStyle = '#7fb3c9';
+      ctx.lineWidth = 5;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(560, 225);
+      ctx.quadraticCurveTo(500, 300, 440, 335);
+      ctx.quadraticCurveTo(370, 375, 310, 320);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(290, 335);
+      ctx.quadraticCurveTo(220, 375, 150, 380);
+      ctx.stroke();
+    }
+
+    function drawMountains(ctx, cx, cy) {
+      const peaks = [{ dx: -35, h: 55, w: 40 }, { dx: 5, h: 70, w: 46 }, { dx: 45, h: 50, w: 36 }];
+      peaks.forEach(p => {
+        const x = cx + p.dx;
+        ctx.fillStyle = '#8b8378';
+        ctx.beginPath();
+        ctx.moveTo(x - p.w / 2, cy);
+        ctx.lineTo(x, cy - p.h);
+        ctx.lineTo(x + p.w / 2, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#6b6459';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.fillStyle = '#f5f5f5';
+        ctx.beginPath();
+        ctx.moveTo(x - p.w * 0.12, cy - p.h * 0.78);
+        ctx.lineTo(x, cy - p.h);
+        ctx.lineTo(x + p.w * 0.12, cy - p.h * 0.78);
+        ctx.lineTo(x, cy - p.h * 0.62);
+        ctx.closePath();
+        ctx.fill();
+      });
+    }
+
+    function drawForest(ctx, cx, cy) {
+      const offsets = [[-20, -10], [0, -20], [20, -8], [-10, 10], [15, 14], [-28, 8], [30, -2]];
+      offsets.forEach(([dx, dy]) => {
+        ctx.fillStyle = '#4f7c4a';
+        ctx.beginPath();
+        ctx.arc(cx + dx, cy + dy, 12, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      offsets.forEach(([dx, dy], i) => {
+        if (i % 2 === 0) {
+          ctx.fillStyle = '#3b5e38';
+          ctx.beginPath();
+          ctx.arc(cx + dx, cy + dy, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+
+    function drawFrame(ctx, w, h, primary) {
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(8, 8, w - 16, h - 16);
+      ctx.lineWidth = 1;
+      ctx.strokeRect(16, 16, w - 32, h - 32);
+
+      const cx = w - 55, cy = 55;
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 22); ctx.lineTo(cx, cy + 22);
+      ctx.moveTo(cx - 22, cy); ctx.lineTo(cx + 22, cy);
+      ctx.stroke();
+      ctx.fillStyle = primary;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - 22);
+      ctx.lineTo(cx - 6, cy - 9);
+      ctx.lineTo(cx + 6, cy - 9);
+      ctx.closePath();
+      ctx.fill();
+      ctx.font = '600 11px "Segoe UI", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillText('N', cx, cy - 27);
+    }
+
+    function drawPin(ctx, x, y, color) {
+      ctx.beginPath();
+      ctx.ellipse(x, y + 3, 7, 3, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y - 6);
+      ctx.lineTo(x + 5, y - 6);
+      ctx.lineTo(x, y + 2);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x, y - 12, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    }
+
+    function drawLabel(ctx, x, bottomY, text, textColor, bgColor) {
+      ctx.font = '600 12px "Segoe UI", sans-serif';
+      const paddingX = 6, boxH = 18;
+      const textW = ctx.measureText(text).width;
+      const boxW = textW + paddingX * 2;
+      const bx = x - boxW / 2;
+      const by = bottomY - boxH;
+      ctx.fillStyle = bgColor;
+      roundRect(ctx, bx, by, boxW, boxH, 5);
+      ctx.fill();
+      ctx.fillStyle = textColor;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, x, by + boxH / 2 + 1);
+    }
+
+    function drawMap() {
+      const canvas = document.getElementById('map-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      const styles = getComputedStyle(document.documentElement);
+      const primary = styles.getPropertyValue('--primary-color').trim();
+      const textColor = styles.getPropertyValue('--text-color').trim();
+      const containerBg = styles.getPropertyValue('--container-bg-color').trim();
+      var background  = new Image();
+      background.src = "./map.jpg";
+      ctx.drawImage(background,0,0);
+
+      locations.forEach(loc => {
+        drawLabel(ctx, loc.x, loc.y - 22, loc.name, textColor, containerBg);
+        drawPin(ctx, loc.x, loc.y, primary);
+      });
+    }
+
+    function getCanvasCoords(evt, canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    }
+
+    function hitTestLocation(x, y) {
+      return locations.find(loc => {
+        const dx = x - loc.x, dy = y - (loc.y - 12);
+        return Math.sqrt(dx * dx + dy * dy) <= 14;
+      });
+    }
+
+    function openPanel(loc) {
+      document.getElementById('panel-title').textContent = loc.name;
+      document.getElementById('panel-desc').textContent = loc.desc;
+      document.getElementById('side-panel').classList.add('open');
+    }
+    function closePanel() {
+      document.getElementById('side-panel').classList.remove('open');
+    }
+
+    function setupMapInteractions() {
+      const canvas = document.getElementById('map-canvas');
+      canvas.addEventListener('click', e => {
+        const { x, y } = getCanvasCoords(e, canvas);
+        const hit = hitTestLocation(x, y);
+        if (hit) openPanel(hit); else closePanel();
+      });
+      canvas.addEventListener('mousemove', e => {
+        const { x, y } = getCanvasCoords(e, canvas);
+        canvas.style.cursor = hitTestLocation(x, y) ? 'pointer' : 'default';
+      });
+      document.getElementById('panel-close').addEventListener('click', closePanel);
+    }
+
+    /* ---------------- character roster ---------------- */
+    // Ok this is bullshit generated by the AI that won't work
+    // its so stupid
+    // it should be indexing, but its so stupid
+    function buildCharacterList() {
+      const list = document.getElementById('character-list');
+      const frag = document.createDocumentFragment();
+      characters.forEach(character_idx=> {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        const img = document.createElement('div');
+        img.className = 'char-image';
+        img.textContent = 'No Image';
+        const info = document.createElement('div');
+        info.className = 'char-info';
+        const name = document.createElement('div');
+        name.className = 'char-name';
+        name.textContent = character_idx.name;
+        const desc = document.createElement('div');
+        desc.className = 'char-desc';
+        desc.textContent = character_idx.desc;
+        info.appendChild(name);
+        info.appendChild(desc);
+        card.appendChild(img);
+        card.appendChild(info);
+        frag.appendChild(card);
+      })
+      list.appendChild(frag);
+
+      for (let i = 0; i < 20; i++) {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        const img = document.createElement('div');
+        img.className = 'char-image';
+        img.textContent = 'No Image';
+        const info = document.createElement('div');
+        info.className = 'char-info';
+        const name = document.createElement('div');
+        name.className = 'char-name';
+        name.textContent = '???';
+        const desc = document.createElement('div');
+        desc.className = 'char-desc';
+        desc.textContent = '???';
+        info.appendChild(name);
+        info.appendChild(desc);
+        card.appendChild(img);
+        card.appendChild(info);
+        frag.appendChild(card);
+      }
+      list.appendChild(frag);
+    }
+
+    /* ---------------- tabs ---------------- */
+    function setupTabs() {
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          buttons.forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById(btn.dataset.tab).classList.add('active');
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      buildCharacterList();
+      setupTabs();
+      setupMapInteractions();
+
+      const initial = location.hash.slice(1) || crypto.randomUUID();
+      if (!location.hash) location.hash = initial;
+      applySeed(initial);
+      const seedInput = document.querySelector('#seed-input');
+
+      let debounceTimer;
+      seedInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const value = seedInput.value.trim();
+          if (value) applySeed(value);
+        }, 15);
+      });
+
+      document.querySelector('#random-seed').addEventListener('click', () => {
+        applySeed(crypto.randomUUID());
+      });
+
+      window.addEventListener('hashchange', () => {
+        const newSeed = location.hash.slice(1);
+        if (newSeed && newSeed !== seedInput.value) applySeed(newSeed);
+      });
+    });
+  </script>
+</head>
+<body>
+  <div class="controls">
+    <div class="seed-wrapper">
+      <input type="text" id="seed-input" placeholder="Enter seed..." />
+      <div class="button-group">
+        <button id="random-seed" aria-label="Random seed">🎲</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <div class="title">Campaign Atlas</div>
+    <div class="tagline">A living map and roster for the party</div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="map-tab" role="tab" aria-selected="true">Map</button>
+      <button class="tab-btn" data-tab="characters-tab" role="tab" aria-selected="false">Characters</button>
+    </div>
+
+    <section id="map-tab" class="tab-panel active">
+      <div class="map-area">
+        <div class="canvas-wrap">
+          <canvas id="map-canvas" width="800" height="500"></canvas>
+        </div>
+        <aside class="side-panel" id="side-panel">
+          <button class="panel-close" id="panel-close" aria-label="Close">&times;</button>
+          <h3 id="panel-title"></h3>
+          <p id="panel-desc"></p>
+        </aside>
+      </div>
+      <p class="map-hint">Click a pin to see what's there.</p>
+    </section>
+
+    <section id="characters-tab" class="tab-panel">
+      <div class="character-list" id="character-list"></div>
+    </section>
+  </div>
+</body>
+</html>
